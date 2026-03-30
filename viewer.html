@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Viewer</title>
+  <style>
+    body{font-family:Arial,sans-serif;background:#0f172a;color:#fff;padding:15px;max-width:900px;margin:auto}
+    .card{background:#1e293b;padding:15px;border-radius:16px;margin-bottom:14px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid #334155;text-align:center}
+    th{background:#0f172a}
+    .team{display:flex;align-items:center;gap:8px}
+    img{width:28px;height:28px;border-radius:50%;object-fit:cover}
+    .match{background:#334155;padding:10px;border-radius:12px;margin-top:10px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Points Table</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Team</th>
+          <th>P</th>
+          <th>W</th>
+          <th>D</th>
+          <th>L</th>
+          <th>GF</th>
+          <th>GA</th>
+          <th>GD</th>
+          <th>PTS</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Match History</h2>
+    <div id="matchList"></div>
+  </div>
+
+  <script>
+    async function loadData() {
+      const res = await fetch("/api/viewer");
+      const data = await res.json();
+
+      const tb = document.getElementById("tableBody");
+      tb.innerHTML = "";
+      data.pointsTable.forEach((t, i) => {
+        tb.innerHTML += `
+          <tr>
+            <td>${i + 1}</td>
+            <td>
+              <div class="team">
+                <img src="${t.logo || ''}" alt="${t.name}">
+                <span>${t.name}</span>
+              </div>
+            </td>
+            <td>${t.played}</td>
+            <td>${t.wins}</td>
+            <td>${t.draws}</td>
+            <td>${t.losses}</td>
+            <td>${t.gf}</td>
+            <td>${t.ga}</td>
+            <td>${t.gd}</td>
+            <td>${t.pts}</td>
+          </tr>
+        `;
+      });
+
+      const box = document.getElementById("matchList");
+      box.innerHTML = "";
+      data.matches.forEach(m => {
+        const a = data.teams.find(x => x.id === m.team1Id);
+        const b = data.teams.find(x => x.id === m.team2Id);
+        box.innerHTML += `
+          <div class="match">
+            <div><b>${m.date}</b></div>
+            <div>${a?.name || m.team1Id} ${m.team1Goals} - ${m.team2Goals} ${b?.name || m.team2Id}</div>
+            <div>${m.note || ""}</div>
+          </div>
+        `;
+      });
+    }
+
+    loadData();
+    setInterval(loadData, 30000);
+  </script>
+</body>
+</html>
