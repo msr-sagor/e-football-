@@ -1,0 +1,30 @@
+{
+  "updatedAt": "2026-03-30T00:00:00.000Z",
+  "teams": [
+    {
+      "id": "sagor",
+      "name": "SAGOR FC",
+      "logo": "",
+      "passwordKey": "TEAM_SAGOR_PASSWORD"
+    },
+    {
+      "id": "emon",
+      "name": "EMON FC",
+      "logo": "",
+      "passwordKey": "TEAM_EMON_PASSWORD"
+    },
+    {
+      "id": "zihad",
+      "name": "ZIHAD FC",
+      "logo": "",
+      "passwordKey": "TEAM_ZIHAD_PASSWORD"
+    },
+    {
+      "id": "antor",
+      "name": "ANTOR FC",
+      "logo": "",
+      "passwordKey": "TEAM_ANTOR_PASSWORD"
+    }
+  ],
+  "matches": []
+}
