@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel</title>
+  <style>
+    body{font-family:Arial,sans-serif;background:#0f172a;color:#fff;padding:15px;max-width:700px;margin:auto}
+    .card{background:#1e293b;padding:15px;border-radius:16px;margin-bottom:14px}
+    input,select,button{width:100%;padding:12px;margin:6px 0;border:none;border-radius:12px}
+    input,select{background:#334155;color:#fff}
+    button{background:#22c55e;color:#fff;font-weight:bold}
+    .danger{background:#ef4444}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .match{background:#334155;padding:10px;border-radius:12px;margin-top:10px}
+    img{width:42px;height:42px;border-radius:50%;object-fit:cover}
+    .teamline{display:flex;align-items:center;gap:8px;margin:8px 0}
+  </style>
+</head>
+<body>
+  <div class="card" id="loginBox">
+    <h2>Admin Login</h2>
+    <input type="password" id="adminPassword" placeholder="Admin password">
+    <button onclick="adminLogin()">Login</button>
+  </div>
+
+  <div id="app" style="display:none">
+    <div class="card">
+      <h2>Add Match</h2>
+      <input type="date" id="date">
+      <select id="team1"></select>
+      <select id="team2"></select>
+      <div class="row">
+        <input type="number" id="g1" placeholder="Team 1 Goals" min="0">
+        <input type="number" id="g2" placeholder="Team 2 Goals" min="0">
+      </div>
+      <input type="text" id="note" placeholder="Note">
+      <button onclick="saveMatch()">Save Match</button>
+    </div>
+
+    <div class="card">
+      <h2>Update Team Logo/Name</h2>
+      <select id="editTeam"></select>
+      <input type="text" id="editTeamName" placeholder="Team name">
+      <input type="text" id="editTeamLogo" placeholder="Logo URL">
+      <button onclick="updateTeam()">Save Team</button>
+    </div>
+
+    <div class="card">
+      <h2>Matches</h2>
+      <div id="matches"></div>
+    </div>
+  </div>
+
+  <script>
+    let token = localStorage.getItem("admin_token") || "";
+    let state = null;
+
+    async function fetchViewer() {
+      const res = await fetch("/api/viewer");
+      state = await res.json();
+      fillTeams();
+      renderMatches();
+    }
+
+    function fillTeams() {
+      const t1 = document.getElementById("team1");
+      const t2 = document.getElementById("team2");
+      const editTeam = document.getElementById("editTeam");
+
+      const options = ['<option value="">Select Team</option>']
+        .concat(state.teams.map(t => `<option value="${t.id}">${t.name}</option>`))
+        .join("");
+
+      t1.innerHTML = options;
+      t2.innerHTML = options;
+      editTeam.innerHTML = options;
+    }
+
+    function renderMatches() {
+      const box = document.getElementById("matches");
+      box.innerHTML = "";
+      for (const m of state.matches) {
+        const a = state.teams.find(x => x.id === m.team1Id);
+        const b = state.teams.find(x => x.id === m.team2Id);
+        box.innerHTML += `
+          <div class="match">
+            <div><b>${m.date}</b></div>
+            <div>${a?.name || m.team1Id} ${m.team1Goals} - ${m.team2Goals} ${b?.name || m.team2Id}</div>
+            <div>${m.note || ""}</div>
+            <button class="danger" onclick="deleteMatch('${m.id}')">Delete</button>
+          </div>
+        `;
+      }
+    }
+
+    async function adminLogin() {
+      const password = document.getElementById("adminPassword").value;
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ role: "admin", password })
+      });
+      const data = await res.json();
+      if (!res.ok) return alert(data.error || "Login failed");
+      token = data.token;
+      localStorage.setItem("admin_token", token);
+      document.getElementById("loginBox").style.display = "none";
+      document.getElementById("app").style.display = "block";
+      await fetchViewer();
+    }
+
+    async function saveMatch() {
+      const payload = {
+        date: document.getElementById("date").value,
+        team1Id: document.getElementById("team1").value,
+        team2Id: document.getElementById("team2").value,
+        team1Goals: document.getElementById("g1").value,
+        team2Goals: document.getElementById("g2").value,
+        note: document.getElementById("note").value
+      };
+
+      const res = await fetch("/api/admin-save-match", {
+        method: "POST",
+        headers: {
+          "Content-Type":"application/json",
+          "Authorization":"Bearer " + token
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (!res.ok) return alert(data.error || "Save failed");
+      await fetchViewer();
+      alert("Saved");
+    }
+
+    async function deleteMatch(id) {
+      const res = await fetch("/api/admin-delete-match", {
+        method: "POST",
+        headers: {
+          "Content-Type":"application/json",
+          "Authorization":"Bearer " + token
+        },
+        body: JSON.stringify({ id })
+      });
+
+      const data = await res.json();
+      if (!res.ok) return alert(data.error || "Delete failed");
+      await fetchViewer();
+    }
+
+    async function updateTeam() {
+      const payload = {
+        teamId: document.getElementById("editTeam").value,
+        name: document.getElementById("editTeamName").value,
+        logo: document.getElementById("editTeamLogo").value
+      };
+
+      const res = await fetch("/api/admin-update-team", {
+        method: "POST",
+        headers: {
+          "Content-Type":"application/json",
+          "Authorization":"Bearer " + token
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (!res.ok) return alert(data.error || "Update failed");
+      await fetchViewer();
+      alert("Team updated");
+    }
+
+    (async () => {
+      if (token) {
+        document.getElementById("loginBox").style.display = "none";
+        document.getElementById("app").style.display = "block";
+        await fetchViewer();
+      }
+    })();
+  </script>
+</body>
+</html>
